@@ -109,6 +109,12 @@ unsigned char i2c_write( unsigned char data ){
 	return 0;
 }
 
+void TWI_write_data(unsigned char data){
+	TWDR=data;  // put data in TWDR
+	TWCR=(1<<TWINT)|(1<<TWEN);    // Clear TWI interrupt flag,Enable TWI
+	while (!(TWCR & (1<<TWINT))); // Wait till complete TWDR byte transmitted
+	while((TWSR & 0xF8) != 0x28); // Check for the acknowledgement
+}
 
 
 /*Read one byte from the I2C device, request more data from device 
@@ -127,6 +133,13 @@ unsigned char i2c_readNak(void){
 }
 
 
+
+unsigned char TWI_read_data(void){
+	TWCR=(1<<TWINT)|(1<<TWEN);    // Clear TWI interrupt flag,Enable TWI
+	while (!(TWCR & (1<<TWINT))); // Wait till complete TWDR byte transmitted
+	while((TWSR & 0xF8) != 0x58); // Check for the acknowledgement
+	return TWDR;
+}
 
 
 #endif /* I2C_MASTER_H_ */

@@ -4,7 +4,8 @@
 
 #include "Basic.h" // min, max
 #include "I2C_Master.h"
-#include "Serial.h"
+#include "uart.h"
+//#include "Serial.h"
 #include <util/delay.h>
 
 #define HMC5883L_Address 0x1E // 7-bit address
@@ -157,10 +158,10 @@ void compass_offset_calibration(int select){
 	Write_Compass(ConfigurationRegisterA, 0b01111000); // Configuring the Control register for normal mode
 	// Offset estimation
 	if (select == 2 | select == 3){
-		Serial_write("Calibrating the Magnetometer ....... Offset");
-		Serial_write("\n\r");
-		Serial_write("Please rotate the magnetometer 2 or 3 times in complete circules with in one minute .............");
-		Serial_write("\n\r");
+		uart_println(0, "Calibrating the Magnetometer ....... Offset");
+		//Serial_write("\n\r");
+		uart_println(0, "Please rotate the magnetometer 2 or 3 times in complete circules with in one minute .............");
+		//Serial_write("\n\r");
 		uint8_t i;
 		for(i=0; i<10; i++){   
 			Compass_ReadRawAxis(&Mag_Raw); // Disregarding first few data
@@ -169,13 +170,13 @@ void compass_offset_calibration(int select){
 		float x_max=-4000,y_max=-4000,z_max=-4000; 
 		float x_min=4000,y_min=4000,z_min=4000;
 		
-		Serial_write("Starting Debug data in "); Serial_write("\n\r");
-		_delay_ms(1000); Serial_write("3"); Serial_write("\n\r");
-		_delay_ms(1000); Serial_write("2"); Serial_write("\n\r");
-		_delay_ms(1000); Serial_write("1"); Serial_write("\n\r");
-		long t = 0;
-		long j;
-		for(j=0; j<=30000000; j++){ //Moreless half minute
+		uart_println(0,"Starting Debug data in "); //Serial_write("\n\r");
+		_delay_ms(1000); uart_println(0, "3"); //Serial_write("\n\r");
+		_delay_ms(1000); uart_println(0,"2"); //Serial_write("\n\r");
+		_delay_ms(1000); uart_println(0,"1"); //Serial_write("\n\r");
+		int t = 0;
+		int j;
+		for(j=0; j<=25000; j++){ //Moreless half minute
 			Compass_ReadRawAxis(&Mag_Raw);
 			Mag_Scaled[0] = (float)Mag_Raw[0]*m_Scale*GainError[0];
 			Mag_Scaled[1] = (float)Mag_Raw[1]*m_Scale*GainError[1];
@@ -186,15 +187,21 @@ void compass_offset_calibration(int select){
 			x_min = min(x_min,Mag_Scaled[0]);
 			y_min = min(y_min,Mag_Scaled[1]);
 			z_min = min(z_min,Mag_Scaled[2]);
+			//uart_print(0,"j> ");
+			//uart_println(0,itoa(j,buffer, 10));			
 			if(j == t){
-				TxBCD((int)t/1000000); Serial_write("\n\r");
-				t+= 1000000;
-			}			
+				char ts[10];
+				uart_print(0,"ts: ");
+				uart_println(0,itoa(t, ts,10));				
+				//TxBCD((int)t/1000000); Serial_write("\n\r");
+				t+= 100;
+				_delay_ms(10);
+			} // Fin If			
 		} // Fin For
 		Offset[0] = ((x_max-x_min)/2)-x_max;
 		Offset[1] = ((y_max-y_min)/2)-y_max;
 		Offset[2] = ((z_max-z_min)/2)-z_max;
-	Serial_write("End Debug -- (Offset Calibration)");	Serial_write("\n\r");
+	uart_println(0,"End Debug -- (Offset Calibration)");	//Serial_write("\n\r");
 	} // Fin If
 }
 

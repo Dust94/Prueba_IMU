@@ -206,6 +206,7 @@ void TxByte(unsigned char dato){
 	UDR0 = dato;
 }
 void TxBCD(int numero){
+	if (numero<0) TxByte('-');
 	TxByte(numero/1000 + '0');
 	TxByte((numero/100)%10 + '0');
 	TxByte((numero/10)%10 + '0');
