@@ -2,9 +2,10 @@
 #ifndef MAGNETOMETER_HMC5883L_H_
 #define MAGNETOMETER_HMC5883L_H_
 
-#include "Basic.h"
+#include "Basic.h" // min, max
 #include "I2C_Master.h"
 #include "Serial.h"
+#include <util/delay.h>
 
 #define HMC5883L_Address 0x1E // 7-bit address
 #define HMC5883L_WRITE 0x3C // Write address. 7-bit address (0x1E) + 1 bit write identifier
@@ -30,7 +31,6 @@
 
 float Offset[3] = {0,0,0};
 float GainError[3] = {1,1,1};
-float gain_fact = 1;
 float m_Scale = 1;
 
 void Compass_SetScale(float gauss){
@@ -38,25 +38,25 @@ void Compass_SetScale(float gauss){
 	if(gauss == 0.88){
 		regValue = 0x00;
 		m_Scale = 0.73;
-		}else if(gauss == 1.3){
+	}else if(gauss == 1.3){
 		regValue = 0x01;
 		m_Scale = 0.92;
-		}else if(gauss == 1.9){
+	}else if(gauss == 1.9){
 		regValue = 0x02;
 		m_Scale = 1.22;
-		}else if(gauss == 2.5){
+	}else if(gauss == 2.5){
 		regValue = 0x03;
 		m_Scale = 1.52;
-		}else if(gauss == 4.0){
+	}else if(gauss == 4.0){
 		regValue = 0x04;
 		m_Scale = 2.27;
-		}else if(gauss == 4.7){
+	}else if(gauss == 4.7){
 		regValue = 0x05;
 		m_Scale = 2.56;
-		}else if(gauss == 5.6){
+	}else if(gauss == 5.6){
 		regValue = 0x06;
 		m_Scale = 3.03;
-		}else if(gauss == 8.1){
+	}else if(gauss == 8.1){
 		regValue = 0x07;
 		m_Scale = 4.35;
 	}
@@ -158,7 +158,9 @@ void compass_offset_calibration(int select){
 	// Offset estimation
 	if (select == 2 | select == 3){
 		Serial_write("Calibrating the Magnetometer ....... Offset");
+		Serial_write("\n\r");
 		Serial_write("Please rotate the magnetometer 2 or 3 times in complete circules with in one minute .............");
+		Serial_write("\n\r");
 		uint8_t i;
 		for(i=0; i<10; i++){   
 			Compass_ReadRawAxis(&Mag_Raw); // Disregarding first few data
@@ -168,10 +170,10 @@ void compass_offset_calibration(int select){
 		float x_min=4000,y_min=4000,z_min=4000;
 		
 		Serial_write("Starting Debug data in ");
-		_delay_ms(1000); Serial_write("3");
-		_delay_ms(1000); Serial_write("2");
-		_delay_ms(1000); Serial_write("1");
-		for(i=0; i<60000000; i++){
+		_delay_ms(1000); Serial_write("3"); Serial_write("\n\r");
+		_delay_ms(1000); Serial_write("2"); Serial_write("\n\r");
+		_delay_ms(1000); Serial_write("1"); Serial_write("\n\r");
+		for(i=0; i<30000000; i++){ //Moreless half minute
 			Compass_ReadRawAxis(&Mag_Raw);
 			Mag_Scaled[0] = (float)Mag_Raw[0]*m_Scale*GainError[0];
 			Mag_Scaled[1] = (float)Mag_Raw[1]*m_Scale*GainError[1];
@@ -183,7 +185,7 @@ void compass_offset_calibration(int select){
 			y_min = min(y_min,Mag_Scaled[1]);
 			z_min = min(z_min,Mag_Scaled[2]);
 		} // Fin For
-	Serial_write("End Debug -- (Offset Calibration)");	
+	Serial_write("End Debug -- (Offset Calibration)");	Serial_write("\n\r");
 	} // Fin If
 }
 
@@ -198,13 +200,13 @@ void Compass_Scalled_Reading(float * Mag_Scaled){
 float compass_heading(){
 	float Mag_Scaled[3];
 	Compass_Scalled_Reading(&Mag_Scaled);
-	float heading = 0;
+	int heading = 0;
 	
 	if (Mag_Scaled[1]>0) {
-		heading = 90-atan(Mag_Scaled[0]/Mag_Scaled[1])*180/PI;
+		heading = (int)90-atan(Mag_Scaled[0]/Mag_Scaled[1])*180/PI;
 	}
 	if (Mag_Scaled[1]<0) {
-		heading = 270-atan(Mag_Scaled[0]/Mag_Scaled[1])*180/PI;
+		heading = (int)270-atan(Mag_Scaled[0]/Mag_Scaled[1])*180/PI;
 	}
 	if (Mag_Scaled[1]==0 & Mag_Scaled[0]<0)	heading = 180;
 	return heading;
