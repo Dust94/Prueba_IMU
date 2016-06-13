@@ -120,7 +120,22 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Accelerometer_ADXL345.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Basic.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="I2C_Master.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Magnetometer_HMC5883L.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="main.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Serial.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
