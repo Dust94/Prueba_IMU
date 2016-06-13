@@ -169,11 +169,12 @@ void compass_offset_calibration(int select){
 		float x_max=-4000,y_max=-4000,z_max=-4000; 
 		float x_min=4000,y_min=4000,z_min=4000;
 		
-		Serial_write("Starting Debug data in ");
+		Serial_write("Starting Debug data in "); Serial_write("\n\r");
 		_delay_ms(1000); Serial_write("3"); Serial_write("\n\r");
 		_delay_ms(1000); Serial_write("2"); Serial_write("\n\r");
 		_delay_ms(1000); Serial_write("1"); Serial_write("\n\r");
-		for(i=0; i<30000000; i++){ //Moreless half minute
+		long t = 0;
+		for(i=0; i<=30000000; i++){ //Moreless half minute
 			Compass_ReadRawAxis(&Mag_Raw);
 			Mag_Scaled[0] = (float)Mag_Raw[0]*m_Scale*GainError[0];
 			Mag_Scaled[1] = (float)Mag_Raw[1]*m_Scale*GainError[1];
@@ -184,7 +185,14 @@ void compass_offset_calibration(int select){
 			x_min = min(x_min,Mag_Scaled[0]);
 			y_min = min(y_min,Mag_Scaled[1]);
 			z_min = min(z_min,Mag_Scaled[2]);
+			if(i == t){
+				TxBCD((int)t/1000000); Serial_write("\n\r");
+				t+= 1000000;
+			}			
 		} // Fin For
+		Offset[0] = ((x_max-x_min)/2)-x_max;
+		Offset[1] = ((y_max-y_min)/2)-y_max;
+		Offset[2] = ((z_max-z_min)/2)-z_max;
 	Serial_write("End Debug -- (Offset Calibration)");	Serial_write("\n\r");
 	} // Fin If
 }
