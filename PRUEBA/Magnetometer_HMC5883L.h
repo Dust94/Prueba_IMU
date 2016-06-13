@@ -174,7 +174,8 @@ void compass_offset_calibration(int select){
 		_delay_ms(1000); Serial_write("2"); Serial_write("\n\r");
 		_delay_ms(1000); Serial_write("1"); Serial_write("\n\r");
 		long t = 0;
-		for(i=0; i<=30000000; i++){ //Moreless half minute
+		long j;
+		for(j=0; j<=30000000; j++){ //Moreless half minute
 			Compass_ReadRawAxis(&Mag_Raw);
 			Mag_Scaled[0] = (float)Mag_Raw[0]*m_Scale*GainError[0];
 			Mag_Scaled[1] = (float)Mag_Raw[1]*m_Scale*GainError[1];
@@ -185,7 +186,7 @@ void compass_offset_calibration(int select){
 			x_min = min(x_min,Mag_Scaled[0]);
 			y_min = min(y_min,Mag_Scaled[1]);
 			z_min = min(z_min,Mag_Scaled[2]);
-			if(i == t){
+			if(j == t){
 				TxBCD((int)t/1000000); Serial_write("\n\r");
 				t+= 1000000;
 			}			
