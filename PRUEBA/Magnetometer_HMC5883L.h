@@ -2,7 +2,9 @@
 #ifndef MAGNETOMETER_HMC5883L_H_
 #define MAGNETOMETER_HMC5883L_H_
 
+#include "Basic.h"
 #include "I2C_Master.h"
+#include "Serial.h"
 
 #define HMC5883L_Address 0x1E // 7-bit address
 #define HMC5883L_WRITE 0x3C // Write address. 7-bit address (0x1E) + 1 bit write identifier
@@ -17,6 +19,18 @@
 #define Single_Mode 0x01
 #define Idle_Mode 0x02 // Or 0x03
 
+#define compass_XY_excitation 1160 // The magnetic field excitation in X and Y direction during Self Test (Calibration)
+#define compass_Z_excitation 1080  // The magnetic field excitation in Z direction during Self Test (Calibration)
+
+#define compass_rad2degree 57.3
+#define compass_cal_x_offset 116   // Manually calculated offset in X direction
+#define compass_cal_y_offset 225   // Manually calculated offset in Y direction
+#define compass_cal_x_gain 1.1     // Stored Gain offset at room temperature
+#define compass_cal_y_gain 1.12    // Stored Gain offset at room temperature
+
+float Offset[3] = {0,0,0};
+float GainError[3] = {1,1,1};
+float gain_fact = 1;
 float m_Scale = 1;
 
 void Compass_SetScale(float gauss){
@@ -92,6 +106,112 @@ void Compass_ReadScaledAxis(float * Mag_Scaled){
 	*(Mag_Scaled+1) = Mag_Raw[1] * m_Scale; //y
 	*(Mag_Scaled+2) = Mag_Raw[2] * m_Scale; //z
 }
+
+
+// This Function calculates the offset in the Magnetometer using Positive and Negative bias Self test capability
+// This function updates X_offset Y_offset and Z_offset Global variables. Call Initialize before 
+void compass_offset_calibration(int select){
+	int Mag_Raw[3];
+	float Mag_Scaled[3];
+	
+	// Gain offset estimation
+	if (select == 1 | select == 3){ // User input in the function
+		Write_Compass(ConfigurationRegisterA, 0b01110001); // Configuring the Control register for Positive Bias mode
+		/* bit configuration = 0 A A DO2 DO1 DO0 MS1 MS2
+		A A                        DO2 DO1 DO0      Sample Rate [Hz]      MS1 MS0    Measurment Mode
+		0 0 = No Average            0   0   0   =   0.75                   0   0   = Normal  
+		0 1 = 2 Sample average      0   0   1   =   1.5                    0   1   = Positive Bias
+		1 0 = 4 Sample Average      0   1   0   =   3                      1   0   = Negative Bais
+		1 1 = 8 Sample Average      0   1   1   =   7.5                    1   1   = -
+		1   0   0   =   15 (Default)
+		1   0   1   =   30
+		1   1   0   =   75
+		1   1   1   =   -
+		*/
+		Compass_ReadRawAxis(&Mag_Raw); // Disregarding the first data
+		while(Mag_Raw[0]<200 | Mag_Raw[1]<200 | Mag_Raw[2]<200){   // Making sure the data is with Positive baised
+		Compass_ReadRawAxis(&Mag_Raw); // Reading the Positive baised Data
+		} //Fin While
+		Mag_Scaled[0] = Mag_Raw[0] * m_Scale;
+		Mag_Scaled[1] = Mag_Raw[1] * m_Scale;
+		Mag_Scaled[2] = Mag_Raw[2] * m_Scale;
+		// Offset = 1160 - Data_positive
+		GainError[0] = (float)compass_XY_excitation/Mag_Scaled[0];
+		GainError[1] = (float)compass_XY_excitation/Mag_Scaled[1];
+		GainError[2] = (float)compass_Z_excitation/Mag_Scaled[2];
+		
+		Write_Compass(ConfigurationRegisterA, 0b01110010); // Configuring the Control register for Negative Bias mode
+		Compass_ReadRawAxis(&Mag_Raw); // Disregarding the first data
+		while(Mag_Raw[0]>-200 | Mag_Raw[1]>-200 | Mag_Raw[2]>-200){  // Making sure the data is with negative baised
+		Compass_ReadRawAxis(&Mag_Raw); // Reading the Negative baised Data
+		} //Fin While
+		Mag_Scaled[0] = Mag_Raw[0] * m_Scale;
+		Mag_Scaled[1] = Mag_Raw[1] * m_Scale;
+		Mag_Scaled[2] = Mag_Raw[2] * m_Scale;
+		// Taking the average of the offsets
+		GainError[0] = (float)( (compass_XY_excitation/abs(Mag_Scaled[0])) + GainError[1] )/2;
+		GainError[1] = (float)( (compass_XY_excitation/abs(Mag_Scaled[1])) + GainError[2] )/2;
+		GainError[2] = (float)( (compass_Z_excitation/abs(Mag_Scaled[2])) + GainError[3] )/2;
+	} //Fin If
+	
+	Write_Compass(ConfigurationRegisterA, 0b01111000); // Configuring the Control register for normal mode
+	// Offset estimation
+	if (select == 2 | select == 3){
+		Serial_write("Calibrating the Magnetometer ....... Offset");
+		Serial_write("Please rotate the magnetometer 2 or 3 times in complete circules with in one minute .............");
+		uint8_t i;
+		for(i=0; i<10; i++){   
+			Compass_ReadRawAxis(&Mag_Raw); // Disregarding first few data
+		}
+		
+		float x_max=-4000,y_max=-4000,z_max=-4000; 
+		float x_min=4000,y_min=4000,z_min=4000;
+		
+		Serial_write("Starting Debug data in ");
+		_delay_ms(1000); Serial_write("3");
+		_delay_ms(1000); Serial_write("2");
+		_delay_ms(1000); Serial_write("1");
+		for(i=0; i<60000000; i++){
+			Compass_ReadRawAxis(&Mag_Raw);
+			Mag_Scaled[0] = (float)Mag_Raw[0]*m_Scale*GainError[0];
+			Mag_Scaled[1] = (float)Mag_Raw[1]*m_Scale*GainError[1];
+			Mag_Scaled[2] = (float)Mag_Raw[2]*m_Scale*GainError[2];
+			x_max = max(x_max,Mag_Scaled[0]);
+			y_max = max(y_max,Mag_Scaled[1]);
+			z_max = max(z_max,Mag_Scaled[2]);
+			x_min = min(x_min,Mag_Scaled[0]);
+			y_min = min(y_min,Mag_Scaled[1]);
+			z_min = min(z_min,Mag_Scaled[2]);
+		} // Fin For
+	Serial_write("End Debug -- (Offset Calibration)");	
+	} // Fin If
+}
+
+void Compass_Scalled_Reading(float * Mag_Scaled){
+  int Mag_Raw[3];
+  Compass_ReadRawAxis(&Mag_Raw);
+  *(Mag_Scaled) = Mag_Raw[0] * m_Scale * GainError[0] + Offset[0]; //x
+  *(Mag_Scaled+1) = Mag_Raw[1] * m_Scale * GainError[1] + Offset[1]; //y
+  *(Mag_Scaled+2) = Mag_Raw[2] * m_Scale * GainError[2] + Offset[2]; //z
+}
+
+float compass_heading(){
+	float Mag_Scaled[3];
+	Compass_Scalled_Reading(&Mag_Scaled);
+	float heading = 0;
+	
+	if (Mag_Scaled[1]>0) {
+		heading = 90-atan(Mag_Scaled[0]/Mag_Scaled[1])*180/PI;
+	}
+	if (Mag_Scaled[1]<0) {
+		heading = 270-atan(Mag_Scaled[0]/Mag_Scaled[1])*180/PI;
+	}
+	if (Mag_Scaled[1]==0 & Mag_Scaled[0]<0)	heading = 180;
+	return heading;
+}
+
+
+
 
 
 
