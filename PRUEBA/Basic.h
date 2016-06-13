@@ -18,8 +18,15 @@ typedef uint8_t BOOL;
 #define cbi(port,bit) (port) &= ~(1 << (bit))
 #define sbi(port,bit) (port) |= (1 << (bit))
 
-#define min(a,b) (((a)<(b))?(a):(b))
-#define max(a,b) (((a)>(b))?(a):(b))
+//#define min(a,b) (((a)<(b))?(a):(b))
+//#define max(a,b) (((a)>(b))?(a):(b))
 
-
+float min(float a, float b){
+	if(a < b) return a;
+	else return b;
+}
+float max(float a, float b){
+	if(a > b) return a;
+	else return b;
+}
 #endif /* BASIC_H_ */
