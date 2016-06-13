@@ -4,18 +4,18 @@
 
 #include "I2C_Master.h"
 
-#define HMC5883L_WRITE 0x3C // write address
-#define HMC5883L_READ 0x3D // read address
+#define HMC5883L_Address 0x1E // 7-bit address
+#define HMC5883L_WRITE 0x3C // Write address. 7-bit address (0x1E) + 1 bit write identifier
+#define HMC5883L_READ 0x3D // Read address. 7-bit address (0x1E) + 1 bit read identifier
 
-#define HMC5883L_Address 0x1E
 #define ConfigurationRegisterA 0x00
 #define ConfigurationRegisterB 0x01
 #define ModeRegister 0x02
-#define DataRegisterBegin 0x03
+#define DataOutputX_MSB 0x03
 
-#define Measurement_Continuous 0x00
-#define Measurement_SingleShot 0x01
-#define Measurement_Idle 0x03
+#define Continuous_Mode 0x00
+#define Single_Mode 0x01
+#define Idle_Mode 0x02 // Or 0x03
 
 float m_Scale = 1;
 
@@ -53,7 +53,7 @@ void Compass_SetScale(float gauss){
 void init_HMC5883L(void){
 	Write_Compass(ConfigurationRegisterA,0x70); //(number of samples averaged = 8) and (Data Output Rate Bits = 15 default)
 	Compass_SetScale(4.7); //Gain Configuration Bits. Sensor Field Range=±4.7(Ga), Gain=390(LSb/Gauss), Resolution=2.56(mG/LSb)
-	Write_Compass(ModeRegister,Measurement_Continuous);
+	Write_Compass(ModeRegister,Continuous_Mode);
 }
 
 void Write_Compass(uint8_t address, uint8_t data){
@@ -65,7 +65,7 @@ void Write_Compass(uint8_t address, uint8_t data){
 
 void Read_Compass(uint8_t buffer[], uint8_t length){
 	i2c_start_wait(HMC5883L_WRITE);
-	i2c_write(DataRegisterBegin); //set pointer to X-axis MSB		 #define DataRegisterBegin 0x03
+	i2c_write(DataOutputX_MSB); //set pointer to X-axis MSB	
 	i2c_stop();
 	
 	i2c_start(HMC5883L_READ);
