@@ -67,7 +67,7 @@ void Compass_SetScale(float gauss){
 
 void init_HMC5883L(void){
 	Write_Compass(ConfigurationRegisterA,0x70); //(number of samples averaged = 8) and (Data Output Rate Bits = 15 default)
-	Compass_SetScale(4.7); //Gain Configuration Bits. Sensor Field Range=±4.7(Ga), Gain=390(LSb/Gauss), Resolution=2.56(mG/LSb)
+	Compass_SetScale(1.3); //Gain Configuration Bits. Sensor Field Range=±1.3(Ga), Gain=390(LSb/Gauss), Resolution=2.56(mG/LSb)
 	Write_Compass(ModeRegister,Continuous_Mode);
 }
 
@@ -96,8 +96,8 @@ void Compass_ReadRawAxis(int * Mag_Raw){
 	uint8_t buffer[6];
 	Read_Compass(buffer, 6);
 	*(Mag_Raw) = (buffer[0] << 8) | buffer[1]; //x
-	*(Mag_Raw+1) = (buffer[2] << 8) | buffer[3]; //y
-	*(Mag_Raw+2) = (buffer[4] << 8) | buffer[5]; //z
+	*(Mag_Raw+2) = (buffer[2] << 8) | buffer[3]; //z
+	*(Mag_Raw+1) = (buffer[4] << 8) | buffer[5]; //y	
 }
 
 void Compass_ReadScaledAxis(float * Mag_Scaled){
